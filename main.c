@@ -1,13 +1,14 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/stat.h>
 
 #include "folders.h"
 #include "node.h"
 
 void show_arr_elems(arr_elem* arr, size_t size) {
     for (int i=0; i<size; i++) {
-        printf("is_dir=%d size=%19zd %s\n", arr[i].is_dir, arr[i].size, arr[i].filename);
+        printf("is_dir=%d size=%7zd %s\n", arr[i].is_dir, arr[i].size, arr[i].filename);
     }
 }
 
@@ -40,20 +41,23 @@ int main() {
             free(full_name);
             full_name = malloc(alloc_size * sizeof(char));
         }
-        strncpy(full_name, "/", parent_size);
-        strncpy(full_name + parent_size, elem->filename, next_file_len + 1);
-        
+        strcpy(full_name, "/");
+        strcpy(full_name + parent_size, elem->filename);
+
         printf("%s\n", full_name);
         
-        FILE *f = fopen(full_name, "rb");
-        if (f == NULL) {
-            elem->size = 0;
+        struct stat buf;
+        lstat(full_name, &buf);
+        
+        if (S_ISDIR(buf.st_mode)) {
             elem->is_dir = 1;
-        } else {
-            fseek(f, 0, SEEK_END);
-            elem->size = ftell(f);
+            elem->size = 0;
+        } else if (S_ISREG(buf.st_mode)) {
             elem->is_dir = 0;
-            fclose(f);
+            elem->size = buf.st_size;
+        } else {
+            elem->is_dir = 0;
+            elem->size = 0;
         }
     }
     
