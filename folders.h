@@ -1,10 +1,3 @@
-/* 
- * File:   folders.h
- * Author: turbanoff
- *
- * Created on March 4, 2013, 10:35 PM
- */
-
 #ifndef FOLDERS_H
 #define	FOLDERS_H
 

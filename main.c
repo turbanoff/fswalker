@@ -1,80 +1,62 @@
-/* 
- * File:   main.c
- * Author: turbanoff
- *
- * Created on March 4, 2013, 10:26 PM
- */
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
 #include "folders.h"
+#include "node.h"
 
-struct dir_entry {
-    char filename[256];
-    int is_dir;
-    struct stack_entry* first_child;
-};
-typedef struct dir_entry dir_entry;
-
-struct stack_entry {
-    struct stack_entry* next;
-    struct dir_entry dir;
-};
-typedef struct stack_entry stack_entry;
-
-void add(stack_entry* tail, directory_entry* next_entry) {
-    tail->next = malloc(sizeof(stack_entry));
-    tail = tail->next;
-    strncpy(tail->dir.filename, next_entry->name, 256);
-    tail->dir.is_dir = next_entry->is_dir;
-    tail->next = NULL;
-}
-
-void show_linked(stack_entry* first) {
-    while (first != NULL) {
-        printf("%s\n", first->dir.filename);
-        first = first->next;
-    }
-}
-
-void show_arr(dir_entry* arr, size_t size) {
+void show_arr_elems(arr_elem* arr, size_t size) {
     for (int i=0; i<size; i++) {
-        printf("%s\n", arr[i].filename);
+        printf("is_dir=%d size=%19zd %s\n", arr[i].is_dir, arr[i].size, arr[i].filename);
     }
 }
 
-int main(int argc, char** argv) {
-    stack_entry head;
-    head.dir.filename[0] = '\0';
-    head.next = NULL;
+int main() {
+    arr_elem root;
+    strcpy(root.filename, "/");
+    root.is_dir = 1;
+    root.size = 0;
+
+    size_t child_count;
+    arr_elem* root_childes = list_dir_elem(&root, &child_count);
     
-    stack_entry* tail = &head;
+    final_node fs;
+    fs.child_count = child_count;
+    fs.fs_elements = root_childes;
+    fs.parent = NULL;
+    fs.next_sibling = &fs;
     
-    directory_head* next_folder = open_folder("/");
-    directory_entry* next_entry;
-    size_t dir_size = 0;
-    while ((next_entry = read_folder(next_folder)) != NULL) {
-        add(tail, next_entry);
-        dir_size++;
-        tail = tail->next;
+    size_t parent_size = 1;
+    size_t alloc_size = 0;
+    char *full_name = NULL;
+    
+    for (size_t i=0; i<child_count; i++) {
+        
+        arr_elem* elem = &fs.fs_elements[i];
+
+        size_t next_file_len = strlen(elem->filename);
+        if (parent_size + next_file_len + 1 > alloc_size) {
+            alloc_size = parent_size + next_file_len + 1;
+            free(full_name);
+            full_name = malloc(alloc_size * sizeof(char));
+        }
+        strncpy(full_name, "/", parent_size);
+        strncpy(full_name + parent_size, elem->filename, next_file_len + 1);
+        
+        printf("%s\n", full_name);
+        
+        FILE *f = fopen(full_name, "rb");
+        if (f == NULL) {
+            elem->size = 0;
+            elem->is_dir = 1;
+        } else {
+            fseek(f, 0, SEEK_END);
+            elem->size = ftell(f);
+            elem->is_dir = 0;
+            fclose(f);
+        }
     }
     
-    dir_entry *arr = malloc(sizeof(dir_entry) * dir_size);
-    stack_entry *iter = head.next;
-    int dir_num = 0;
-    while (iter != NULL) {
-        arr[dir_num] = iter->dir;
-        iter = iter->next;
-        dir_num++;
-    }
-    
-    show_linked(head.next);
-    printf("----------------------------");
-    show_arr(arr, dir_size);
-    
-    printf("----------------------------");
-    return (EXIT_SUCCESS);
+    show_arr_elems(root_childes, child_count);
 }
 
