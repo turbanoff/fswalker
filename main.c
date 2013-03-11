@@ -3,7 +3,6 @@
 #include <string.h>
 #include <sys/stat.h>
 
-#include "folders.h"
 #include "node.h"
 
 void show_arr_elems(arr_elem* arr, size_t size) {
@@ -13,54 +12,66 @@ void show_arr_elems(arr_elem* arr, size_t size) {
 }
 
 int main() {
-    arr_elem root;
-    strcpy(root.filename, "/");
-    root.is_dir = 1;
-    root.size = 0;
-
+    arr_elem root = {.filename = "/", .is_dir = 1, .size = 0};
+    
     size_t child_count;
-    arr_elem* root_childes = list_dir_elem(&root, &child_count);
     
-    final_node fs;
-    fs.child_count = child_count;
-    fs.fs_elements = root_childes;
-    fs.parent = NULL;
-    fs.next_sibling = &fs;
+    arr_elem* root_elems = list_dir_elem("/", &root, &child_count, &root.size);
+    final_node* root_node = malloc(sizeof(final_node));
+    root_node->child_count = child_count;
+    root_node->fs_elements = root_elems;
+    root_node->next_sibling = root_node;
+    root_node->parent_index = 0;
+    root_node->parent = NULL;
     
-    size_t parent_size = 1;
-    size_t alloc_size = 0;
-    char *full_name = NULL;
-    
-    for (size_t i=0; i<child_count; i++) {
-        
-        arr_elem* elem = &fs.fs_elements[i];
-
-        size_t next_file_len = strlen(elem->filename);
-        if (parent_size + next_file_len + 1 > alloc_size) {
-            alloc_size = parent_size + next_file_len + 1;
-            free(full_name);
-            full_name = malloc(alloc_size * sizeof(char));
-        }
-        strcpy(full_name, "/");
-        strcpy(full_name + parent_size, elem->filename);
-
-        printf("%s\n", full_name);
-        
-        struct stat buf;
-        lstat(full_name, &buf);
-        
-        if (S_ISDIR(buf.st_mode)) {
-            elem->is_dir = 1;
-            elem->size = 0;
-        } else if (S_ISREG(buf.st_mode)) {
-            elem->is_dir = 0;
-            elem->size = buf.st_size;
-        } else {
-            elem->is_dir = 0;
-            elem->size = 0;
-        }
-    }
-    
-    show_arr_elems(root_childes, child_count);
+    show_arr_elems(root_elems, child_count);
+    printf("\"%s\" size in bytes = %zd\n", root.filename, root.size);
 }
 
+void next_level(final_node* node, const char* parent_path) {
+    final_node* first = node;
+    
+    size_t alloc_size = 0;
+    char *full_name = NULL;
+    size_t parent_size = strlen(parent_path);
+    
+    final_node *prev_child = NULL;
+    do {        
+        for (size_t i=0; i<node->child_count; i++) {
+
+            arr_elem* elem = &node->fs_elements[i];
+            if (!elem->is_dir) {
+                elem->child = NULL;
+                continue;
+            }
+            
+            elem->child = malloc(sizeof(final_node));
+            elem->child->parent = node;
+            elem->child->parent_index = i;
+            elem->child->next_sibling = NULL;
+
+            if (prev_child != NULL) {
+                prev_child->next_sibling = elem->child;
+            }
+
+            size_t next_file_len = strlen(elem->filename);
+            if (parent_size + next_file_len + 1 > alloc_size) {
+                alloc_size = parent_size + next_file_len + 1;
+                free(full_name);
+                full_name = malloc(alloc_size * sizeof(char));
+            }
+            strcpy(full_name, parent_path);
+            strcpy(full_name + parent_size, elem->filename);
+
+            printf("%s\n", full_name);            
+
+//            elem->child->fs_elements = list_dir_elem(elem, &elem->child->child_count);
+
+            prev_child = elem->child;
+        }
+        
+        node = node->next_sibling;
+    } while (node != first);
+    prev_child->next_sibling = node->fs_elements[0].child;
+    free(full_name);
+}
