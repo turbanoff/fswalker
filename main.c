@@ -5,13 +5,7 @@
 
 #include "node.h"
 
-void next_level(final_node *node);
-
-void show_arr_elems(arr_elem* arr, size_t size) {
-    for (int i=0; i<size; i++) {
-        printf("is_dir=%d size=%7zd %s\n", arr[i].is_dir, arr[i].size, arr[i].filename);
-    }
-}
+final_node * next_level(final_node *node);
 
 int main() {
     arr_elem root = {.filename = "/", .is_dir = 1, .size = 0};
@@ -25,26 +19,27 @@ int main() {
     size_t child_count;
     
     arr_elem *root_elems = list_dir_elem("/", &root, &child_count, &root.size);
-    final_node *root_node = malloc(sizeof(final_node));
-    root_node->child_count = child_count;
-    root_node->fs_elements = root_elems;
-    root_node->next_sibling = root_node;
-    root_node->parent_index = 0;
-    root_node->parent = true_root;
+    final_node *iter_node = malloc(sizeof(final_node));
+    iter_node->child_count = child_count;
+    iter_node->fs_elements = root_elems;
+    iter_node->next_sibling = iter_node;
+    iter_node->parent_index = 0;
+    iter_node->parent = true_root;
     
-    show_arr_elems(root_elems, child_count);
-    printf("\"%s\" size in bytes = %zd\n", root.filename, root.size);
-    
-    next_level(root_node);
+    while (iter_node != NULL) {
+        iter_node = next_level(iter_node);
+        printf("\"%s\" size in bytes = %zd\n", root.filename, root.size);
+    }
 }
 
-void next_level(final_node *node) {
+final_node * next_level(final_node *node) {
     final_node *first = node;
     
     size_t alloc_size = 0;
     char *full_name = NULL;
 
-    final_node * prev_child = NULL;
+    final_node *prev_child = NULL;
+    final_node *first_in_next_level = NULL;
     do {
         //создадим полный путь к родителю
         size_t parent_size = 0;
@@ -52,13 +47,14 @@ void next_level(final_node *node) {
         final_node *travers_to_root = node;
         int is_first = 1;
         while (travers_to_root->parent != NULL) {
-            arr_elem* next = travers_to_root->parent->fs_elements + travers_to_root->parent_index;
+            arr_elem *next = travers_to_root->parent->fs_elements + travers_to_root->parent_index;
             size_t next_part_len = strlen(next->filename);
-            size_t new_parent_size = next_part_len + parent_size;
+            size_t new_parent_size = next_part_len + 1 + parent_size;
             char *new_parent_path = malloc(sizeof(char) * (new_parent_size + is_first));
             memcpy(new_parent_path, next->filename, next_part_len + is_first);
+            new_parent_path[next_part_len] = '/';
             if (!is_first) {
-                memcpy(new_parent_path + next_part_len, parent_path, parent_size + 1);
+                memcpy(new_parent_path + next_part_len + 1, parent_path, parent_size + 1);
             }
             free(parent_path);
             parent_size = new_parent_size;
@@ -69,13 +65,16 @@ void next_level(final_node *node) {
         
         for (size_t i=0; i<node->child_count; i++) {
 
-            arr_elem* elem = &node->fs_elements[i];
+            arr_elem *elem = &node->fs_elements[i];
             if (!elem->is_dir) {
                 elem->child = NULL;
                 continue;
             }
             
             elem->child = malloc(sizeof(final_node));
+            if (first_in_next_level == NULL) {
+                first_in_next_level = elem->child;
+            }
             elem->child->parent = node;
             elem->child->parent_index = i;
             elem->child->next_sibling = NULL;
@@ -93,15 +92,24 @@ void next_level(final_node *node) {
             strcpy(full_name, parent_path);
             strcpy(full_name + parent_size, elem->filename);
 
-            printf("%s\n", full_name);            
-
-//            elem->child->fs_elements = list_dir_elem(elem, &elem->child->child_count);
+            elem->child->fs_elements = list_dir_elem(full_name, elem, &elem->child->child_count, &elem->size);
+            //необходимо прибавить полученный размер в байтах ко всем родительским папкам
+            final_node *to_root_for_size = node;
+            if (elem->size != 0) {
+                while (to_root_for_size->parent != NULL) {
+                    to_root_for_size->parent->fs_elements[to_root_for_size->parent_index].size += elem->size;
+                    to_root_for_size = to_root_for_size->parent;
+                }
+            }
 
             prev_child = elem->child;
         }
         
         node = node->next_sibling;
     } while (node != first);
-    prev_child->next_sibling = node->fs_elements[0].child;
     free(full_name);
+    if (prev_child != NULL) {
+        prev_child->next_sibling = first_in_next_level;
+    }
+    return first_in_next_level;
 }
