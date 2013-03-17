@@ -35,6 +35,8 @@ arr_elem * list_dir_elem(char *parent_full_path, arr_elem *parent, size_t *dir_s
     char *full_name = malloc(sizeof(char) * alloc_size);
     strcpy(full_name, parent_full_path);
     
+    int ends_with_slash = (parent_full_path[parent_path_size - 1] == '/');
+    
     dirent *ent;
     while ( (ent = readdir(dir)) != NULL ) {
         if (strcmp(ent->d_name, ".") == 0 || strcmp(ent->d_name, "..") == 0)
@@ -44,15 +46,16 @@ arr_elem * list_dir_elem(char *parent_full_path, arr_elem *parent, size_t *dir_s
         strcpy(next_elem->filename, ent->d_name);
         //создать полный путь - проверить папка, или нет
         size_t next_file_len = strlen(next_elem->filename);
-        if (parent_path_size + next_file_len + 1 + 1 > alloc_size) { //2 - под слеш и завершающий ноль
-            alloc_size = parent_path_size + next_file_len + 1 + 1;
+        if (parent_path_size + next_file_len + 1 + ends_with_slash > alloc_size) { //2 - под слеш и завершающий ноль
+            alloc_size = parent_path_size + next_file_len + 1 + ends_with_slash;
             free(full_name);
             full_name = malloc(alloc_size * sizeof(char));
             strcpy(full_name, parent_full_path);
-            full_name[parent_path_size] = '/';
         }
-        
-        strcpy(full_name + parent_path_size + 1, next_elem->filename);
+        if (!ends_with_slash)
+            full_name[parent_path_size] = '/';
+
+        strcpy(full_name + parent_path_size + !ends_with_slash, next_elem->filename);
         struct stat buf;
         lstat(full_name, &buf);
         if (S_ISDIR(buf.st_mode)) {
@@ -66,7 +69,7 @@ arr_elem * list_dir_elem(char *parent_full_path, arr_elem *parent, size_t *dir_s
             next_elem->is_dir = 0;
             next_elem->size = 0;
         }
-        printf("is_dir=%d size=%7zd %s\n", next_elem->is_dir, next_elem->size, full_name);
+        printf("is_dir=%d size=%9zd %s\n", next_elem->is_dir, next_elem->size, full_name);
         
         //добавляем на время в связный список
         list_node *next_list_node = malloc(sizeof(list_node));

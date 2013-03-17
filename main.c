@@ -18,7 +18,7 @@ int main() {
     
     size_t child_count;
     
-    arr_elem *root_elems = list_dir_elem("/", &root, &child_count, &root.size);
+    arr_elem *root_elems = list_dir_elem(root.filename, &root, &child_count, &root.size);
     final_node *iter_node = malloc(sizeof(final_node));
     iter_node->child_count = child_count;
     iter_node->fs_elements = root_elems;
@@ -28,8 +28,8 @@ int main() {
     
     int level = 1;
     while (iter_node != NULL) {
-        iter_node = next_level(iter_node);
         printf("\"%s\" level = %d size in bytes = %zd\n", root.filename, level, root.size);
+        iter_node = next_level(iter_node);
         level++;
     }
 }
