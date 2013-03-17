@@ -26,9 +26,11 @@ int main() {
     iter_node->parent_index = 0;
     iter_node->parent = true_root;
     
+    int level = 1;
     while (iter_node != NULL) {
         iter_node = next_level(iter_node);
-        printf("\"%s\" size in bytes = %zd\n", root.filename, root.size);
+        printf("\"%s\" level = %d size in bytes = %zd\n", root.filename, level, root.size);
+        level++;
     }
 }
 
@@ -36,30 +38,33 @@ final_node * next_level(final_node *node) {
     final_node *first = node;
     
     size_t alloc_size = 0;
-    char *full_name = NULL;
+    char *full_name = malloc(0);
 
     final_node *prev_child = NULL;
     final_node *first_in_next_level = NULL;
     do {
+        if (node->child_count == 0) {
+            node = node->next_sibling;
+            continue;
+        }
+        
         //создадим полный путь к родителю
-        size_t parent_size = 0;
-        char *parent_path = malloc(0);
+        size_t parent_len = 0;
+        char *parent_path = malloc(1);
+        parent_path[0] = '\0';
         final_node *travers_to_root = node;
-        int is_first = 1;
         while (travers_to_root->parent != NULL) {
             arr_elem *next = travers_to_root->parent->fs_elements + travers_to_root->parent_index;
             size_t next_part_len = strlen(next->filename);
-            size_t new_parent_size = next_part_len + 1 + parent_size;
-            char *new_parent_path = malloc(sizeof(char) * (new_parent_size + is_first));
-            memcpy(new_parent_path, next->filename, next_part_len + is_first);
+            size_t new_parent_len = next_part_len + parent_len + 1; //1 символ слеша
+            char *new_parent_path = malloc(sizeof(char) * (new_parent_len + 1)); //1 завершающий ноль
+            
+            memcpy(new_parent_path, next->filename, sizeof(char) * next_part_len);
             new_parent_path[next_part_len] = '/';
-            if (!is_first) {
-                memcpy(new_parent_path + next_part_len + 1, parent_path, parent_size + 1);
-            }
+            memcpy(new_parent_path + next_part_len + 1, parent_path, sizeof(char) * (parent_len + 1) );
             free(parent_path);
-            parent_size = new_parent_size;
+            parent_len = new_parent_len;
             parent_path = new_parent_path;
-            is_first = 0;
             travers_to_root = travers_to_root->parent;
         }
         
@@ -84,13 +89,13 @@ final_node * next_level(final_node *node) {
             }
 
             size_t next_file_len = strlen(elem->filename);
-            if (parent_size + next_file_len + 1 > alloc_size) {
-                alloc_size = parent_size + next_file_len + 1;
+            if (parent_len + next_file_len + 1 > alloc_size) {
+                alloc_size = parent_len + next_file_len + 1;
                 free(full_name);
                 full_name = malloc(alloc_size * sizeof(char));
             }
             strcpy(full_name, parent_path);
-            strcpy(full_name + parent_size, elem->filename);
+            strcpy(full_name + parent_len, elem->filename);
 
             elem->child->fs_elements = list_dir_elem(full_name, elem, &elem->child->child_count, &elem->size);
             //необходимо прибавить полученный размер в байтах ко всем родительским папкам
