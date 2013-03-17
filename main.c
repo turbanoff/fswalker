@@ -34,6 +34,30 @@ int main() {
     }
 }
 
+char * create_full_path_to_parent(final_node *node, size_t *parent_len) {
+    //printf("create full path to parent...");
+    //создадим полный путь к родителю
+    *parent_len = 0;
+    char *parent_path = malloc(1);
+    parent_path[0] = '\0';
+    final_node *travers_to_root = node;
+    while (travers_to_root->parent != NULL) {
+        arr_elem *next = travers_to_root->parent->fs_elements + travers_to_root->parent_index;
+        size_t next_part_len = strlen(next->filename);
+        size_t new_parent_len = next_part_len + *parent_len + 1; //1 символ слеша
+        char *new_parent_path = malloc(sizeof(char) * (new_parent_len + 1)); //1 завершающий ноль
+
+        memcpy(new_parent_path, next->filename, sizeof(char) * next_part_len);
+        new_parent_path[next_part_len] = '/';
+        memcpy(new_parent_path + next_part_len + 1, parent_path, sizeof(char) * (*parent_len + 1) );
+        free(parent_path);
+        *parent_len = new_parent_len;
+        parent_path = new_parent_path;
+        travers_to_root = travers_to_root->parent;
+    }
+    return parent_path;
+}
+
 final_node * next_level(final_node *node) {
     final_node *first = node;
     
@@ -47,27 +71,9 @@ final_node * next_level(final_node *node) {
             node = node->next_sibling;
             continue;
         }
-        
-        //создадим полный путь к родителю
-        size_t parent_len = 0;
-        char *parent_path = malloc(1);
-        parent_path[0] = '\0';
-        final_node *travers_to_root = node;
-        while (travers_to_root->parent != NULL) {
-            arr_elem *next = travers_to_root->parent->fs_elements + travers_to_root->parent_index;
-            size_t next_part_len = strlen(next->filename);
-            size_t new_parent_len = next_part_len + parent_len + 1; //1 символ слеша
-            char *new_parent_path = malloc(sizeof(char) * (new_parent_len + 1)); //1 завершающий ноль
-            
-            memcpy(new_parent_path, next->filename, sizeof(char) * next_part_len);
-            new_parent_path[next_part_len] = '/';
-            memcpy(new_parent_path + next_part_len + 1, parent_path, sizeof(char) * (parent_len + 1) );
-            free(parent_path);
-            parent_len = new_parent_len;
-            parent_path = new_parent_path;
-            travers_to_root = travers_to_root->parent;
-        }
-        
+        size_t parent_len;
+        char *parent_path = create_full_path_to_parent(node, &parent_len);
+        //printf("Iterate through childs of (%.*s)\n", (int)parent_len, parent_path);
         for (size_t i=0; i<node->child_count; i++) {
 
             arr_elem *elem = &node->fs_elements[i];

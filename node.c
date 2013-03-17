@@ -15,6 +15,7 @@ typedef struct list_node list_node;
 typedef struct dirent dirent;
 
 arr_elem * list_dir_elem(char *parent_full_path, arr_elem *parent, size_t *dir_size, size_t *size_in_bytes) {
+    //printf("list_dir_elem %s\n", parent_full_path);
     DIR *dir = opendir(parent_full_path);
     if (dir == NULL) {
         *dir_size = 0;
@@ -34,8 +35,10 @@ arr_elem * list_dir_elem(char *parent_full_path, arr_elem *parent, size_t *dir_s
     size_t alloc_size = parent_path_size + 8 + 1;
     char *full_name = malloc(sizeof(char) * alloc_size);
     strcpy(full_name, parent_full_path);
-    
-    int ends_with_slash = (parent_full_path[parent_path_size - 1] == '/');
+    if (parent_full_path[parent_path_size - 1] != '/') {
+        full_name[parent_path_size] = '/';
+        parent_path_size++;
+    }
     
     dirent *ent;
     while ( (ent = readdir(dir)) != NULL ) {
@@ -43,19 +46,23 @@ arr_elem * list_dir_elem(char *parent_full_path, arr_elem *parent, size_t *dir_s
             continue;
         //создаем элемент массива
         arr_elem *next_elem = malloc(sizeof(arr_elem));
+        size_t _strlen = strlen(ent->d_name);
+        if (_strlen >= 256) {
+            printf("list_dir_elem %s\n", parent_full_path);
+            printf("strlen = %zd name = %s\n", _strlen, ent->d_name);
+        }
         strcpy(next_elem->filename, ent->d_name);
         //создать полный путь - проверить папка, или нет
         size_t next_file_len = strlen(next_elem->filename);
-        if (parent_path_size + next_file_len + 1 + ends_with_slash > alloc_size) { //2 - под слеш и завершающий ноль
-            alloc_size = parent_path_size + next_file_len + 1 + ends_with_slash;
-            free(full_name);
+        if (parent_path_size + next_file_len + 1 > alloc_size) { //1 - под завершающий ноль
+            alloc_size = parent_path_size + next_file_len + 1;
+            char* old_full_name = full_name;
             full_name = malloc(alloc_size * sizeof(char));
-            strcpy(full_name, parent_full_path);
+            strncpy(full_name, old_full_name, parent_path_size);
+            free(old_full_name);
         }
-        if (!ends_with_slash)
-            full_name[parent_path_size] = '/';
 
-        strcpy(full_name + parent_path_size + !ends_with_slash, next_elem->filename);
+        strcpy(full_name + parent_path_size, next_elem->filename);
         struct stat buf;
         lstat(full_name, &buf);
         if (S_ISDIR(buf.st_mode)) {
@@ -69,7 +76,7 @@ arr_elem * list_dir_elem(char *parent_full_path, arr_elem *parent, size_t *dir_s
             next_elem->is_dir = 0;
             next_elem->size = 0;
         }
-        printf("is_dir=%d size=%9zd %s\n", next_elem->is_dir, next_elem->size, full_name);
+        //printf("is_dir=%d size=%9zd %s\n", next_elem->is_dir, next_elem->size, full_name);
         
         //добавляем на время в связный список
         list_node *next_list_node = malloc(sizeof(list_node));
@@ -94,5 +101,6 @@ arr_elem * list_dir_elem(char *parent_full_path, arr_elem *parent, size_t *dir_s
     *dir_size = arr_size;
     *size_in_bytes = summary_dir_size;
     free(full_name);
+    closedir(dir);
     return result;
 }
