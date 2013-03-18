@@ -12,7 +12,6 @@ struct list_node {
     struct list_node *next;
 };
 typedef struct list_node list_node;
-typedef struct dirent dirent;
 
 arr_elem * list_dir_elem(char *parent_full_path, arr_elem *parent, size_t *dir_size, size_t *size_in_bytes) {
     //printf("list_dir_elem %s\n", parent_full_path);
@@ -40,17 +39,14 @@ arr_elem * list_dir_elem(char *parent_full_path, arr_elem *parent, size_t *dir_s
         parent_path_size++;
     }
     
-    dirent *ent;
+    struct dirent *ent;
     while ( (ent = readdir(dir)) != NULL ) {
         if (strcmp(ent->d_name, ".") == 0 || strcmp(ent->d_name, "..") == 0)
             continue;
         //создаем элемент массива
         arr_elem *next_elem = malloc(sizeof(arr_elem));
         size_t _strlen = strlen(ent->d_name);
-        if (_strlen >= 256) {
-            printf("list_dir_elem %s\n", parent_full_path);
-            printf("strlen = %zd name = %s\n", _strlen, ent->d_name);
-        }
+        next_elem->filename = malloc(sizeof(char) * _strlen + 1);
         strcpy(next_elem->filename, ent->d_name);
         //создать полный путь - проверить папка, или нет
         size_t next_file_len = strlen(next_elem->filename);
@@ -76,7 +72,7 @@ arr_elem * list_dir_elem(char *parent_full_path, arr_elem *parent, size_t *dir_s
             next_elem->is_dir = 0;
             next_elem->size = 0;
         }
-        //printf("is_dir=%d size=%9zd %s\n", next_elem->is_dir, next_elem->size, full_name);
+        printf("is_dir=%d size=%9zd %s\n", next_elem->is_dir, next_elem->size, full_name);
         
         //добавляем на время в связный список
         list_node *next_list_node = malloc(sizeof(list_node));

@@ -44,6 +44,8 @@ char * create_full_path_to_parent(final_node *node, size_t *parent_len) {
     while (travers_to_root->parent != NULL) {
         arr_elem *next = travers_to_root->parent->fs_elements + travers_to_root->parent_index;
         size_t next_part_len = strlen(next->filename);
+        if (next->filename[next_part_len - 1] == '/')
+            next_part_len--;
         size_t new_parent_len = next_part_len + *parent_len + 1; //1 символ слеша
         char *new_parent_path = malloc(sizeof(char) * (new_parent_len + 1)); //1 завершающий ноль
 

@@ -4,7 +4,7 @@
 struct final_node;
 
 struct arr_elem {
-    char filename[513];
+    char *filename;
     int is_dir;
     size_t size;
     struct final_node *child;
