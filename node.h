@@ -6,7 +6,7 @@ struct final_node;
 struct arr_elem {
     char *filename;
     int is_dir;
-    size_t size;
+    unsigned long long size;
     struct final_node *child;
 };
 typedef struct arr_elem arr_elem;
@@ -20,6 +20,6 @@ struct final_node {
 };
 typedef struct final_node final_node;
 
-arr_elem * list_dir_elem(char *parent_full_path, arr_elem *parent, size_t *dir_size, size_t *size_in_bytes);
+arr_elem * list_dir_elem(char *parent_full_path, arr_elem *parent, size_t *dir_size, unsigned long long *size_in_bytes);
 #endif	/* NODE_H */
 

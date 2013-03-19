@@ -13,22 +13,26 @@ struct list_node {
 };
 typedef struct list_node list_node;
 
-arr_elem * list_dir_elem(char *parent_full_path, arr_elem *parent, size_t *dir_size, size_t *size_in_bytes) {
+arr_elem * list_dir_elem(char *parent_full_path, arr_elem *parent, size_t *dir_size, unsigned long long *size_in_bytes) {
     //printf("list_dir_elem %s\n", parent_full_path);
+    if (strcmp(parent_full_path, "/proc") == 0) {
+        *dir_size = 0;
+        *size_in_bytes = 0;
+        return NULL;
+    }
     DIR *dir = opendir(parent_full_path);
     if (dir == NULL) {
         *dir_size = 0;
+        *size_in_bytes = 0;
         return NULL;
     }
     
-    list_node first;
-    first.elem = NULL;
-    first.next = NULL;
+    list_node first = {.elem = NULL, .next = NULL};
     
     size_t arr_size = 0;
     list_node *tail = &first;
     
-    size_t summary_dir_size = 0;
+    unsigned long long summary_dir_size = 0;
     
     size_t parent_path_size = strlen(parent_full_path);
     size_t alloc_size = parent_path_size + 8 + 1;
@@ -45,11 +49,10 @@ arr_elem * list_dir_elem(char *parent_full_path, arr_elem *parent, size_t *dir_s
             continue;
         //создаем элемент массива
         arr_elem *next_elem = malloc(sizeof(arr_elem));
-        size_t _strlen = strlen(ent->d_name);
-        next_elem->filename = malloc(sizeof(char) * _strlen + 1);
+        size_t next_file_len = strlen(ent->d_name);
+        next_elem->filename = malloc(sizeof(char) * next_file_len + 1);
         strcpy(next_elem->filename, ent->d_name);
-        //создать полный путь - проверить папка, или нет
-        size_t next_file_len = strlen(next_elem->filename);
+        //создать полный путь, чтобы проверить папка, или нет
         if (parent_path_size + next_file_len + 1 > alloc_size) { //1 - под завершающий ноль
             alloc_size = parent_path_size + next_file_len + 1;
             char* old_full_name = full_name;
@@ -67,12 +70,12 @@ arr_elem * list_dir_elem(char *parent_full_path, arr_elem *parent, size_t *dir_s
         } else if (S_ISREG(buf.st_mode)) {
             next_elem->is_dir = 0;
             next_elem->size = buf.st_size;
-            summary_dir_size += next_elem->size;
+            summary_dir_size += buf.st_size;
         } else {
             next_elem->is_dir = 0;
             next_elem->size = 0;
         }
-        printf("is_dir=%d size=%9zd %s\n", next_elem->is_dir, next_elem->size, full_name);
+        printf("is_dir=%d size=%9llu %s\n", next_elem->is_dir, next_elem->size, full_name);
         
         //добавляем на время в связный список
         list_node *next_list_node = malloc(sizeof(list_node));

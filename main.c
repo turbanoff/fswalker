@@ -9,12 +9,7 @@ final_node * next_level(final_node *node);
 
 int main() {
     arr_elem root = {.filename = "/", .is_dir = 1, .size = 0};
-    final_node *true_root = malloc(sizeof(final_node));
-    true_root->child_count = 1;
-    true_root->fs_elements = &root;
-    true_root->next_sibling = true_root;
-    true_root->parent = NULL;
-    true_root->parent_index = 0;
+    final_node root_fs = {.child_count = 1, .fs_elements = &root, .next_sibling = &root_fs, .parent = NULL, .parent_index = 0};
     
     size_t child_count;
     
@@ -24,14 +19,17 @@ int main() {
     iter_node->fs_elements = root_elems;
     iter_node->next_sibling = iter_node;
     iter_node->parent_index = 0;
-    iter_node->parent = true_root;
+    iter_node->parent = &root_fs;
     
     int level = 1;
     while (iter_node != NULL) {
-        printf("\"%s\" level = %d size in bytes = %zd\n", root.filename, level, root.size);
+        printf("\"%s\" level = %d size in bytes = %llu\n", root.filename, level, root.size);
         iter_node = next_level(iter_node);
         level++;
     }
+    printf("success");
+    fflush(stdout);
+    scanf("%c", &level);
 }
 
 char * create_full_path_to_parent(final_node *node, size_t *parent_len) {
