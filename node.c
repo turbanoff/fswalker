@@ -63,7 +63,7 @@ arr_elem * list_dir_elem(char *parent_full_path, arr_elem *parent, size_t *dir_s
 
         strcpy(full_name + parent_path_size, next_elem->filename);
         struct stat buf;
-        lstat(full_name, &buf);
+        stat(full_name, &buf);
         if (S_ISDIR(buf.st_mode)) {
             next_elem->is_dir = 1;
             next_elem->size = 0;
